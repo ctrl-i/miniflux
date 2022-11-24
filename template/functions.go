@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"regexp"
 
 	"miniflux.app/config"
 	"miniflux.app/crypto"
@@ -27,6 +28,8 @@ import (
 type funcMap struct {
 	router *mux.Router
 }
+
+var imgRE = regexp.MustCompile(`<img[^>]+\bsrc=["']([^"']+)\.jpg["']`)
 
 // Map returns a map of template functions that are compiled during template parsing.
 func (f *funcMap) Map() template.FuncMap {

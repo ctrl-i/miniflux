@@ -21,6 +21,7 @@ import (
 	"miniflux.app/proxy"
 	"miniflux.app/timezone"
 	"miniflux.app/url"
+	"miniflux.app/reader/sanitizer"
 
 	"github.com/gorilla/mux"
 )

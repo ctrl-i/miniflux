@@ -36,6 +36,21 @@ func (f *funcMap) Map() template.FuncMap {
 		"hasKey":         hasKey,
 		"truncate":       truncate,
 		"isEmail":        isEmail,
+		"stripHTML": func(htm string) template.HTML {
+			stripped := bmpolicy.Sanitize(string(htm))
+			stripped := sanitizer.StripTags(string(htm))
+			return template.HTML(fmt.Sprintf("%s", stripped))
+		},
+		"findImages": func (htm, title string) template.HTML {
+			matches := imgRE.FindStringSubmatch(fmt.Sprintf("%s", template.HTML(htm)))
+			if matches != nil {
+				return template.HTML(fmt.Sprintf(
+					`<p><img aria-hidden="true" src="%s.jpg" loading="lazy" alt="%s" /></p>`,
+					matches[1], title,
+				))
+			}
+			return template.HTML("")
+		},
 		"baseURL": func() string {
 			return config.Opts.BaseURL()
 		},

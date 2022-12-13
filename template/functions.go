@@ -41,7 +41,7 @@ func (f *funcMap) Map() template.FuncMap {
 		"truncate":       truncate,
 		"isEmail":        isEmail,
 		"stripHTML": func(htm string) template.HTML {
-			stripped := bmpolicy.Sanitize(string(htm))
+			// stripped := bmpolicy.Sanitize(string(htm))
 			stripped := sanitizer.StripTags(string(htm))
 			return template.HTML(fmt.Sprintf("%s", stripped))
 		},

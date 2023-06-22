@@ -1,6 +1,5 @@
-// Copyright 2017 Frédéric Guillot. All rights reserved.
-// Use of this source code is governed by the Apache 2.0
-// license that can be found in the LICENSE file.
+// SPDX-FileCopyrightText: Copyright The Miniflux Authors. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 package storage // import "miniflux.app/storage"
 
@@ -445,6 +444,33 @@ func (s *Storage) MarkAllAsRead(userID int64) error {
 
 	count, _ := result.RowsAffected()
 	logger.Debug("[Storage:MarkAllAsRead] %d items marked as read", count)
+
+	return nil
+}
+
+// MarkGloballyVisibleFeedsAsRead updates all user entries to the read status.
+func (s *Storage) MarkGloballyVisibleFeedsAsRead(userID int64) error {
+	query := `
+		UPDATE
+			entries
+		SET
+			status=$1,
+			changed_at=now()
+		FROM
+			feeds
+		WHERE
+			entries.feed_id = feeds.id
+			AND entries.user_id=$2
+			AND entries.status=$3
+			AND feeds.hide_globally=$4
+	`
+	result, err := s.db.Exec(query, model.EntryStatusRead, userID, model.EntryStatusUnread, false)
+	if err != nil {
+		return fmt.Errorf(`store: unable to mark globally visible feeds as read: %v`, err)
+	}
+
+	count, _ := result.RowsAffected()
+	logger.Debug("[Storage:MarkGloballyVisibleFeedsAsRead] %d items marked as read", count)
 
 	return nil
 }

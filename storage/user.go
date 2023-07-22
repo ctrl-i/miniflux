@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"miniflux.app/crypto"
 	"miniflux.app/logger"
 	"miniflux.app/model"
 
@@ -57,7 +58,7 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 	var hashedPassword string
 	if userCreationRequest.Password != "" {
 		var err error
-		hashedPassword, err = hashPassword(userCreationRequest.Password)
+		hashedPassword, err = crypto.HashPassword(userCreationRequest.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -86,10 +87,11 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 			openid_connect_id,
 			display_mode,
 			entry_order,
-		    default_reading_speed,
-		    cjk_reading_speed,
-		    default_home_page,
-		    categories_sorting_order
+			default_reading_speed,
+			cjk_reading_speed,
+			default_home_page,
+			categories_sorting_order,
+			mark_read_on_view
 	`
 
 	tx, err := s.db.Begin()
@@ -127,6 +129,7 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 		&user.CJKReadingSpeed,
 		&user.DefaultHomePage,
 		&user.CategoriesSortingOrder,
+		&user.MarkReadOnView,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -155,7 +158,7 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 // UpdateUser updates a user.
 func (s *Storage) UpdateUser(user *model.User) error {
 	if user.Password != "" {
-		hashedPassword, err := hashPassword(user.Password)
+		hashedPassword, err := crypto.HashPassword(user.Password)
 		if err != nil {
 			return err
 		}
@@ -182,9 +185,10 @@ func (s *Storage) UpdateUser(user *model.User) error {
 				default_reading_speed=$18,
 				cjk_reading_speed=$19,
 				default_home_page=$20,
-				categories_sorting_order=$21
+				categories_sorting_order=$21,
+				mark_read_on_view=$22
 			WHERE
-				id=$22
+				id=$23
 		`
 
 		_, err = s.db.Exec(
@@ -210,6 +214,7 @@ func (s *Storage) UpdateUser(user *model.User) error {
 			user.CJKReadingSpeed,
 			user.DefaultHomePage,
 			user.CategoriesSortingOrder,
+			user.MarkReadOnView,
 			user.ID,
 		)
 		if err != nil {
@@ -237,9 +242,10 @@ func (s *Storage) UpdateUser(user *model.User) error {
 				default_reading_speed=$17,
 				cjk_reading_speed=$18,
 				default_home_page=$19,
-				categories_sorting_order=$20
+				categories_sorting_order=$20,
+				mark_read_on_view=$21
 			WHERE
-				id=$21
+				id=$22
 		`
 
 		_, err := s.db.Exec(
@@ -264,6 +270,7 @@ func (s *Storage) UpdateUser(user *model.User) error {
 			user.CJKReadingSpeed,
 			user.DefaultHomePage,
 			user.CategoriesSortingOrder,
+			user.MarkReadOnView,
 			user.ID,
 		)
 
@@ -310,7 +317,8 @@ func (s *Storage) UserByID(userID int64) (*model.User, error) {
 			default_reading_speed,
 			cjk_reading_speed,
 			default_home_page,
-			categories_sorting_order
+			categories_sorting_order,
+			mark_read_on_view
 		FROM
 			users
 		WHERE
@@ -344,7 +352,8 @@ func (s *Storage) UserByUsername(username string) (*model.User, error) {
 			default_reading_speed,
 			cjk_reading_speed,
 			default_home_page,
-			categories_sorting_order
+			categories_sorting_order,
+			mark_read_on_view
 		FROM
 			users
 		WHERE
@@ -378,7 +387,8 @@ func (s *Storage) UserByField(field, value string) (*model.User, error) {
 			default_reading_speed,
 			cjk_reading_speed,
 			default_home_page,
-			categories_sorting_order
+			categories_sorting_order,
+			mark_read_on_view
 		FROM
 			users
 		WHERE
@@ -419,7 +429,8 @@ func (s *Storage) UserByAPIKey(token string) (*model.User, error) {
 			u.default_reading_speed,
 			u.cjk_reading_speed,
 			u.default_home_page,
-			u.categories_sorting_order
+			u.categories_sorting_order,
+			u.mark_read_on_view
 		FROM
 			users u
 		LEFT JOIN
@@ -455,6 +466,7 @@ func (s *Storage) fetchUser(query string, args ...interface{}) (*model.User, err
 		&user.CJKReadingSpeed,
 		&user.DefaultHomePage,
 		&user.CategoriesSortingOrder,
+		&user.MarkReadOnView,
 	)
 
 	if err == sql.ErrNoRows {
@@ -551,7 +563,8 @@ func (s *Storage) Users() (model.Users, error) {
 			default_reading_speed,
 			cjk_reading_speed,
 			default_home_page,
-			categories_sorting_order
+			categories_sorting_order,
+			mark_read_on_view
 		FROM
 			users
 		ORDER BY username ASC
@@ -588,6 +601,7 @@ func (s *Storage) Users() (model.Users, error) {
 			&user.CJKReadingSpeed,
 			&user.DefaultHomePage,
 			&user.CategoriesSortingOrder,
+			&user.MarkReadOnView,
 		)
 
 		if err != nil {
@@ -635,9 +649,4 @@ func (s *Storage) HasPassword(userID int64) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
 }

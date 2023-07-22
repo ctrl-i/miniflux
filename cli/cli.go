@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	flagInfoHelp            = "Show application information"
+	flagInfoHelp            = "Show build information"
 	flagVersionHelp         = "Show application version"
 	flagMigrateHelp         = "Run SQL migrations"
 	flagFlushSessionsHelp   = "Flush all sessions (disconnect users)"
@@ -28,6 +28,8 @@ const (
 	flagConfigFileHelp      = "Load configuration file"
 	flagConfigDumpHelp      = "Print parsed configuration values"
 	flagHealthCheckHelp     = `Perform a health check on the given endpoint (the value "auto" try to guess the health check endpoint).`
+	flagRefreshFeedsHelp    = "Refresh a batch of feeds and exit"
+	flagRunCleanupTasksHelp = "Run cleanup tasks (delete old sessions and archives old entries)"
 )
 
 // Parse parses command line arguments.
@@ -45,6 +47,8 @@ func Parse() {
 		flagConfigFile      string
 		flagConfigDump      bool
 		flagHealthCheck     string
+		flagRefreshFeeds    bool
+		flagRunCleanupTasks bool
 	)
 
 	flag.BoolVar(&flagInfo, "info", false, flagInfoHelp)
@@ -61,6 +65,8 @@ func Parse() {
 	flag.StringVar(&flagConfigFile, "c", "", flagConfigFileHelp)
 	flag.BoolVar(&flagConfigDump, "config-dump", false, flagConfigDumpHelp)
 	flag.StringVar(&flagHealthCheck, "healthcheck", "", flagHealthCheckHelp)
+	flag.BoolVar(&flagRefreshFeeds, "refresh-feeds", false, flagRefreshFeedsHelp)
+	flag.BoolVar(&flagRunCleanupTasks, "run-cleanup-tasks", false, flagRunCleanupTasksHelp)
 	flag.Parse()
 
 	cfg := config.NewParser()
@@ -185,6 +191,16 @@ func Parse() {
 	// Create admin user and start the daemon.
 	if config.Opts.CreateAdmin() {
 		createAdmin(store)
+	}
+
+	if flagRefreshFeeds {
+		refreshFeeds(store)
+		return
+	}
+
+	if flagRunCleanupTasks {
+		runCleanupTasks(store)
+		return
 	}
 
 	startDaemon(store)

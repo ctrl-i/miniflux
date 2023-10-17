@@ -5,6 +5,7 @@ package api // import "miniflux.app/v2/internal/api"
 
 import (
 	json_parser "encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -22,6 +23,16 @@ func (h *handler) createFeed(w http.ResponseWriter, r *http.Request) {
 	if err := json_parser.NewDecoder(r.Body).Decode(&feedCreationRequest); err != nil {
 		json.BadRequest(w, r, err)
 		return
+	}
+
+	// Make the feed category optional for clients who don't support categories.
+	if feedCreationRequest.CategoryID == 0 {
+		category, err := h.store.FirstCategory(userID)
+		if err != nil {
+			json.ServerError(w, r, err)
+			return
+		}
+		feedCreationRequest.CategoryID = category.ID
 	}
 
 	if validationErr := validator.ValidateFeedCreation(h.store, userID, &feedCreationRequest); validationErr != nil {
@@ -64,9 +75,13 @@ func (h *handler) refreshAllFeeds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		h.pool.Push(jobs)
-	}()
+	slog.Info(
+		"Triggered a manual refresh of all feeds from the API",
+		slog.Int64("user_id", userID),
+		slog.Int("nb_jobs", len(jobs)),
+	)
+
+	go h.pool.Push(jobs)
 
 	json.NoContent(w, r)
 }

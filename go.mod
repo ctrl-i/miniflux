@@ -10,7 +10,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mccutchen/go-httpbin/v2 v2.11.1
 	github.com/prometheus/client_golang v1.17.0
-	github.com/tdewolff/minify/v2 v2.12.9
+	github.com/tdewolff/minify/v2 v2.20.5
 	github.com/yuin/goldmark v1.5.6
 	golang.org/x/crypto v0.14.0
 	golang.org/x/net v0.17.0
@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	github.com/tdewolff/parse/v2 v2.6.8 // indirect
+	github.com/tdewolff/parse/v2 v2.7.3-0.20231031132452-e7c20a5d77ab // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

@@ -6,7 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/coreos/go-oidc/v3 v3.6.0
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.10.9
 	github.com/mccutchen/go-httpbin/v2 v2.11.1
 	github.com/prometheus/client_golang v1.17.0

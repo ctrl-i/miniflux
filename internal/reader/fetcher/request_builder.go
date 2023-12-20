@@ -53,11 +53,11 @@ func (r *RequestBuilder) WithLastModified(lastModified string) *RequestBuilder {
 	return r
 }
 
-func (r *RequestBuilder) WithUserAgent(userAgent string) *RequestBuilder {
+func (r *RequestBuilder) WithUserAgent(userAgent string, defaultUserAgent string) *RequestBuilder {
 	if userAgent != "" {
 		r.headers.Set("User-Agent", userAgent)
 	} else {
-		r.headers.Del("User-Agent")
+		r.headers.Set("User-Agent", defaultUserAgent)
 	}
 	return r
 }
@@ -104,6 +104,8 @@ func (r *RequestBuilder) IgnoreTLSErrors(value bool) *RequestBuilder {
 func (r *RequestBuilder) ExecuteRequest(requestURL string) (*http.Response, error) {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
+		// Setting `DialContext` disables HTTP/2, this option forces the transport to try HTTP/2 regardless.
+		ForceAttemptHTTP2: true,
 		DialContext: (&net.Dialer{
 			// Default is 30s.
 			Timeout: 10 * time.Second,

@@ -75,6 +75,9 @@ func (f *funcMap) Map() template.FuncMap {
 		"safeCSS": func(str string) template.CSS {
 			return template.CSS(str)
 		},
+		"safeJS": func(str string) template.JS {
+			return template.JS(str)
+		},
 		"noescape": func(str string) template.HTML {
 			return template.HTML(str)
 		},

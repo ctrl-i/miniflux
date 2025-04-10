@@ -189,11 +189,15 @@ func (p *Parser) parseLines(lines []string) (err error) {
 		case "PROXY_PRIVATE_KEY":
 			slog.Warn("The PROXY_PRIVATE_KEY environment variable is deprecated, use MEDIA_PROXY_PRIVATE_KEY instead")
 			randomKey := make([]byte, 16)
-			rand.Read(randomKey)
+			if _, err := rand.Read(randomKey); err != nil {
+				return fmt.Errorf("config: unable to generate random key: %w", err)
+			}
 			p.opts.mediaProxyPrivateKey = parseBytes(value, randomKey)
 		case "MEDIA_PROXY_PRIVATE_KEY":
 			randomKey := make([]byte, 16)
-			rand.Read(randomKey)
+			if _, err := rand.Read(randomKey); err != nil {
+				return fmt.Errorf("config: unable to generate random key: %w", err)
+			}
 			p.opts.mediaProxyPrivateKey = parseBytes(value, randomKey)
 		case "MEDIA_PROXY_CUSTOM_URL":
 			p.opts.mediaProxyCustomURL = parseString(value, defaultMediaProxyURL)
@@ -236,7 +240,12 @@ func (p *Parser) parseLines(lines []string) (err error) {
 		case "HTTP_CLIENT_MAX_BODY_SIZE":
 			p.opts.httpClientMaxBodySize = int64(parseInt(value, defaultHTTPClientMaxBodySize) * 1024 * 1024)
 		case "HTTP_CLIENT_PROXY":
-			p.opts.httpClientProxy = parseString(value, defaultHTTPClientProxy)
+			p.opts.httpClientProxyURL, err = url.Parse(parseString(value, defaultHTTPClientProxy))
+			if err != nil {
+				return fmt.Errorf("config: invalid HTTP_CLIENT_PROXY value: %w", err)
+			}
+		case "HTTP_CLIENT_PROXIES":
+			p.opts.httpClientProxies = parseStringList(value, []string{})
 		case "HTTP_CLIENT_USER_AGENT":
 			p.opts.httpClientUserAgent = parseString(value, defaultHTTPClientUserAgent)
 		case "HTTP_SERVER_TIMEOUT":

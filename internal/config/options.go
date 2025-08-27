@@ -28,15 +28,15 @@ const (
 	defaultRootURL                            = "http://localhost"
 	defaultBasePath                           = ""
 	defaultWorkerPoolSize                     = 16
-	defaultPollingFrequency                   = 60
-	defaultForceRefreshInterval               = 30
+	defaultPollingFrequency                   = 60 * time.Minute
+	defaultForceRefreshInterval               = 30 * time.Minute
 	defaultBatchSize                          = 100
 	defaultPollingScheduler                   = "round_robin"
-	defaultSchedulerEntryFrequencyMinInterval = 5
-	defaultSchedulerEntryFrequencyMaxInterval = 24 * 60
+	defaultSchedulerEntryFrequencyMinInterval = 5 * time.Minute
+	defaultSchedulerEntryFrequencyMaxInterval = 24 * time.Hour
 	defaultSchedulerEntryFrequencyFactor      = 1
-	defaultSchedulerRoundRobinMinInterval     = 60
-	defaultSchedulerRoundRobinMaxInterval     = 1440
+	defaultSchedulerRoundRobinMinInterval     = 1 * time.Hour
+	defaultSchedulerRoundRobinMaxInterval     = 24 * time.Hour
 	defaultPollingParsingErrorLimit           = 3
 	defaultRunMigrations                      = false
 	defaultDatabaseURL                        = "user=postgres password=postgres dbname=miniflux2 sslmode=disable"
@@ -47,12 +47,12 @@ const (
 	defaultCertFile                           = ""
 	defaultKeyFile                            = ""
 	defaultCertDomain                         = ""
-	defaultCleanupFrequencyHours              = 24
-	defaultCleanupArchiveReadDays             = 60
-	defaultCleanupArchiveUnreadDays           = 180
+	defaultCleanupFrequency                   = 24 * time.Hour
+	defaultCleanupArchiveReadInterval         = 60 * 24 * time.Hour
+	defaultCleanupArchiveUnreadInterval       = 180 * 24 * time.Hour
 	defaultCleanupArchiveBatchSize            = 10000
-	defaultCleanupRemoveSessionsDays          = 30
-	defaultMediaProxyHTTPClientTimeout        = 120
+	defaultCleanupRemoveSessionsInterval      = 30 * 24 * time.Hour
+	defaultMediaProxyHTTPClientTimeout        = 120 * time.Second
 	defaultMediaProxyMode                     = "http-only"
 	defaultMediaResourceTypes                 = "image"
 	defaultMediaProxyURL                      = ""
@@ -74,16 +74,16 @@ const (
 	defaultOauth2OidcProviderName             = "OpenID Connect"
 	defaultOAuth2Provider                     = ""
 	defaultDisableLocalAuth                   = false
-	defaultHTTPClientTimeout                  = 20
+	defaultHTTPClientTimeout                  = 20 * time.Second
 	defaultHTTPClientMaxBodySize              = 15
 	defaultHTTPClientProxy                    = ""
-	defaultHTTPServerTimeout                  = 300
+	defaultHTTPServerTimeout                  = 300 * time.Second
 	defaultAuthProxyHeader                    = ""
 	defaultAuthProxyUserCreation              = false
 	defaultMaintenanceMode                    = false
 	defaultMaintenanceMessage                 = "Miniflux is currently under maintenance"
 	defaultMetricsCollector                   = false
-	defaultMetricsRefreshInterval             = 60
+	defaultMetricsRefreshInterval             = 60 * time.Second
 	defaultMetricsAllowedNetworks             = "127.0.0.1/8"
 	defaultMetricsUsername                    = ""
 	defaultMetricsPassword                    = ""
@@ -99,6 +99,9 @@ type option struct {
 	Key   string
 	Value any
 }
+
+// Opts holds parsed configuration options.
+var Opts *options
 
 // options contains configuration options.
 type options struct {
@@ -122,29 +125,30 @@ type options struct {
 	certFile                           string
 	certDomain                         string
 	certKeyFile                        string
-	cleanupFrequencyHours              int
-	cleanupArchiveReadDays             int
-	cleanupArchiveUnreadDays           int
+	cleanupFrequencyInterval           time.Duration
+	cleanupArchiveReadInterval         time.Duration
+	cleanupArchiveUnreadInterval       time.Duration
 	cleanupArchiveBatchSize            int
-	cleanupRemoveSessionsDays          int
-	pollingFrequency                   int
-	forceRefreshInterval               int
+	cleanupRemoveSessionsInterval      time.Duration
+	forceRefreshInterval               time.Duration
 	batchSize                          int
-	pollingScheduler                   string
-	schedulerEntryFrequencyMinInterval int
-	schedulerEntryFrequencyMaxInterval int
+	schedulerEntryFrequencyMinInterval time.Duration
+	schedulerEntryFrequencyMaxInterval time.Duration
 	schedulerEntryFrequencyFactor      int
-	schedulerRoundRobinMinInterval     int
-	schedulerRoundRobinMaxInterval     int
+	schedulerRoundRobinMinInterval     time.Duration
+	schedulerRoundRobinMaxInterval     time.Duration
+	pollingFrequency                   time.Duration
+	pollingLimitPerHost                int
 	pollingParsingErrorLimit           int
+	pollingScheduler                   string
 	workerPoolSize                     int
 	createAdmin                        bool
 	adminUsername                      string
 	adminPassword                      string
-	mediaProxyHTTPClientTimeout        int
+	mediaProxyHTTPClientTimeout        time.Duration
 	mediaProxyMode                     string
 	mediaProxyResourceTypes            []string
-	mediaProxyCustomURL                string
+	mediaProxyCustomURL                *url.URL
 	fetchBilibiliWatchTime             bool
 	fetchNebulaWatchTime               bool
 	fetchOdyseeWatchTime               bool
@@ -161,18 +165,18 @@ type options struct {
 	oidcProviderName                   string
 	oauth2Provider                     string
 	disableLocalAuth                   bool
-	httpClientTimeout                  int
+	httpClientTimeout                  time.Duration
 	httpClientMaxBodySize              int64
 	httpClientProxyURL                 *url.URL
 	httpClientProxies                  []string
 	httpClientUserAgent                string
-	httpServerTimeout                  int
+	httpServerTimeout                  time.Duration
 	authProxyHeader                    string
 	authProxyUserCreation              bool
 	maintenanceMode                    bool
 	maintenanceMessage                 string
 	metricsCollector                   bool
-	metricsRefreshInterval             int
+	metricsRefreshInterval             time.Duration
 	metricsAllowedNetworks             []string
 	metricsUsername                    string
 	metricsPassword                    string
@@ -205,11 +209,11 @@ func NewOptions() *options {
 		certFile:                           defaultCertFile,
 		certDomain:                         defaultCertDomain,
 		certKeyFile:                        defaultKeyFile,
-		cleanupFrequencyHours:              defaultCleanupFrequencyHours,
-		cleanupArchiveReadDays:             defaultCleanupArchiveReadDays,
-		cleanupArchiveUnreadDays:           defaultCleanupArchiveUnreadDays,
+		cleanupFrequencyInterval:           defaultCleanupFrequency,
+		cleanupArchiveReadInterval:         defaultCleanupArchiveReadInterval,
+		cleanupArchiveUnreadInterval:       defaultCleanupArchiveUnreadInterval,
 		cleanupArchiveBatchSize:            defaultCleanupArchiveBatchSize,
-		cleanupRemoveSessionsDays:          defaultCleanupRemoveSessionsDays,
+		cleanupRemoveSessionsInterval:      defaultCleanupRemoveSessionsInterval,
 		pollingFrequency:                   defaultPollingFrequency,
 		forceRefreshInterval:               defaultForceRefreshInterval,
 		batchSize:                          defaultBatchSize,
@@ -225,7 +229,7 @@ func NewOptions() *options {
 		mediaProxyHTTPClientTimeout:        defaultMediaProxyHTTPClientTimeout,
 		mediaProxyMode:                     defaultMediaProxyMode,
 		mediaProxyResourceTypes:            []string{defaultMediaResourceTypes},
-		mediaProxyCustomURL:                defaultMediaProxyURL,
+		mediaProxyCustomURL:                nil,
 		filterEntryMaxAgeDays:              defaultFilterEntryMaxAgeDays,
 		fetchBilibiliWatchTime:             defaultFetchBilibiliWatchTime,
 		fetchNebulaWatchTime:               defaultFetchNebulaWatchTime,
@@ -357,19 +361,19 @@ func (o *options) CertDomain() string {
 	return o.certDomain
 }
 
-// CleanupFrequencyHours returns the interval in hours for cleanup jobs.
-func (o *options) CleanupFrequencyHours() int {
-	return o.cleanupFrequencyHours
+// CleanupFrequencyHours returns the interval for cleanup jobs.
+func (o *options) CleanupFrequency() time.Duration {
+	return o.cleanupFrequencyInterval
 }
 
-// CleanupArchiveReadDays returns the number of days after which marking read items as removed.
-func (o *options) CleanupArchiveReadDays() int {
-	return o.cleanupArchiveReadDays
+// CleanupArchiveReadDays returns the interval after which marking read items as removed.
+func (o *options) CleanupArchiveReadInterval() time.Duration {
+	return o.cleanupArchiveReadInterval
 }
 
-// CleanupArchiveUnreadDays returns the number of days after which marking unread items as removed.
-func (o *options) CleanupArchiveUnreadDays() int {
-	return o.cleanupArchiveUnreadDays
+// CleanupArchiveUnreadDays returns the interval after which marking unread items as removed.
+func (o *options) CleanupArchiveUnreadInterval() time.Duration {
+	return o.cleanupArchiveUnreadInterval
 }
 
 // CleanupArchiveBatchSize returns the number of entries to archive for each interval.
@@ -377,9 +381,9 @@ func (o *options) CleanupArchiveBatchSize() int {
 	return o.cleanupArchiveBatchSize
 }
 
-// CleanupRemoveSessionsDays returns the number of days after which to remove sessions.
-func (o *options) CleanupRemoveSessionsDays() int {
-	return o.cleanupRemoveSessionsDays
+// CleanupRemoveSessionsDays returns the interval after which to remove sessions.
+func (o *options) CleanupRemoveSessionsInterval() time.Duration {
+	return o.cleanupRemoveSessionsInterval
 }
 
 // WorkerPoolSize returns the number of background worker.
@@ -387,13 +391,8 @@ func (o *options) WorkerPoolSize() int {
 	return o.workerPoolSize
 }
 
-// PollingFrequency returns the interval to refresh feeds in the background.
-func (o *options) PollingFrequency() int {
-	return o.pollingFrequency
-}
-
 // ForceRefreshInterval returns the force refresh interval
-func (o *options) ForceRefreshInterval() int {
+func (o *options) ForceRefreshInterval() time.Duration {
 	return o.forceRefreshInterval
 }
 
@@ -402,18 +401,34 @@ func (o *options) BatchSize() int {
 	return o.batchSize
 }
 
+// PollingFrequency returns the interval to refresh feeds in the background.
+func (o *options) PollingFrequency() time.Duration {
+	return o.pollingFrequency
+}
+
+// PollingLimitPerHost returns the limit of concurrent requests per host.
+// Set to zero to disable.
+func (o *options) PollingLimitPerHost() int {
+	return o.pollingLimitPerHost
+}
+
+// PollingParsingErrorLimit returns the limit of errors when to stop polling.
+func (o *options) PollingParsingErrorLimit() int {
+	return o.pollingParsingErrorLimit
+}
+
 // PollingScheduler returns the scheduler used for polling feeds.
 func (o *options) PollingScheduler() string {
 	return o.pollingScheduler
 }
 
-// SchedulerEntryFrequencyMaxInterval returns the maximum interval in minutes for the entry frequency scheduler.
-func (o *options) SchedulerEntryFrequencyMaxInterval() int {
+// SchedulerEntryFrequencyMaxInterval returns the maximum interval for the entry frequency scheduler.
+func (o *options) SchedulerEntryFrequencyMaxInterval() time.Duration {
 	return o.schedulerEntryFrequencyMaxInterval
 }
 
-// SchedulerEntryFrequencyMinInterval returns the minimum interval in minutes for the entry frequency scheduler.
-func (o *options) SchedulerEntryFrequencyMinInterval() int {
+// SchedulerEntryFrequencyMinInterval returns the minimum interval for the entry frequency scheduler.
+func (o *options) SchedulerEntryFrequencyMinInterval() time.Duration {
 	return o.schedulerEntryFrequencyMinInterval
 }
 
@@ -422,17 +437,12 @@ func (o *options) SchedulerEntryFrequencyFactor() int {
 	return o.schedulerEntryFrequencyFactor
 }
 
-func (o *options) SchedulerRoundRobinMinInterval() int {
+func (o *options) SchedulerRoundRobinMinInterval() time.Duration {
 	return o.schedulerRoundRobinMinInterval
 }
 
-func (o *options) SchedulerRoundRobinMaxInterval() int {
+func (o *options) SchedulerRoundRobinMaxInterval() time.Duration {
 	return o.schedulerRoundRobinMaxInterval
-}
-
-// PollingParsingErrorLimit returns the limit of errors when to stop polling.
-func (o *options) PollingParsingErrorLimit() int {
-	return o.pollingParsingErrorLimit
 }
 
 // IsOAuth2UserCreationAllowed returns true if user creation is allowed for OAuth2 users.
@@ -553,12 +563,12 @@ func (o *options) MediaProxyResourceTypes() []string {
 }
 
 // MediaCustomProxyURL returns the custom proxy URL for medias.
-func (o *options) MediaCustomProxyURL() string {
+func (o *options) MediaCustomProxyURL() *url.URL {
 	return o.mediaProxyCustomURL
 }
 
-// MediaProxyHTTPClientTimeout returns the time limit in seconds before the proxy HTTP client cancel the request.
-func (o *options) MediaProxyHTTPClientTimeout() int {
+// MediaProxyHTTPClientTimeout returns the time limit before the proxy HTTP client cancel the request.
+func (o *options) MediaProxyHTTPClientTimeout() time.Duration {
 	return o.mediaProxyHTTPClientTimeout
 }
 
@@ -578,7 +588,7 @@ func (o *options) HasSchedulerService() bool {
 }
 
 // HTTPClientTimeout returns the time limit in seconds before the HTTP client cancel the request.
-func (o *options) HTTPClientTimeout() int {
+func (o *options) HTTPClientTimeout() time.Duration {
 	return o.httpClientTimeout
 }
 
@@ -607,8 +617,8 @@ func (o *options) HasHTTPClientProxiesConfigured() bool {
 	return len(o.httpClientProxies) > 0
 }
 
-// HTTPServerTimeout returns the time limit in seconds before the HTTP server cancel the request.
-func (o *options) HTTPServerTimeout() int {
+// HTTPServerTimeout returns the time limit before the HTTP server cancel the request.
+func (o *options) HTTPServerTimeout() time.Duration {
 	return o.httpServerTimeout
 }
 
@@ -629,8 +639,8 @@ func (o *options) HasMetricsCollector() bool {
 	return o.metricsCollector
 }
 
-// MetricsRefreshInterval returns the refresh interval in seconds.
-func (o *options) MetricsRefreshInterval() int {
+// MetricsRefreshInterval returns the refresh interval.
+func (o *options) MetricsRefreshInterval() time.Duration {
 	return o.metricsRefreshInterval
 }
 
@@ -701,7 +711,7 @@ func (o *options) SortedOptions(redactSecret bool) []*option {
 		mediaProxyPrivateKeyValue = "<binary-data>"
 	}
 
-	var keyValues = map[string]interface{}{
+	var keyValues = map[string]any{
 		"ADMIN_PASSWORD":                         redactSecretValue(o.adminPassword, redactSecret),
 		"ADMIN_USERNAME":                         o.adminUsername,
 		"AUTH_PROXY_HEADER":                      o.authProxyHeader,
@@ -711,11 +721,11 @@ func (o *options) SortedOptions(redactSecret bool) []*option {
 		"BATCH_SIZE":                             o.batchSize,
 		"CERT_DOMAIN":                            o.certDomain,
 		"CERT_FILE":                              o.certFile,
+		"CLEANUP_FREQUENCY_HOURS":                int(o.cleanupFrequencyInterval.Hours()),
 		"CLEANUP_ARCHIVE_BATCH_SIZE":             o.cleanupArchiveBatchSize,
-		"CLEANUP_ARCHIVE_READ_DAYS":              o.cleanupArchiveReadDays,
-		"CLEANUP_ARCHIVE_UNREAD_DAYS":            o.cleanupArchiveUnreadDays,
-		"CLEANUP_FREQUENCY_HOURS":                o.cleanupFrequencyHours,
-		"CLEANUP_REMOVE_SESSIONS_DAYS":           o.cleanupRemoveSessionsDays,
+		"CLEANUP_ARCHIVE_READ_DAYS":              int(o.cleanupArchiveReadInterval.Hours() / 24),
+		"CLEANUP_ARCHIVE_UNREAD_DAYS":            int(o.cleanupArchiveUnreadInterval.Hours() / 24),
+		"CLEANUP_REMOVE_SESSIONS_DAYS":           int(o.cleanupRemoveSessionsInterval.Hours() / 24),
 		"CREATE_ADMIN":                           o.createAdmin,
 		"DATABASE_CONNECTION_LIFETIME":           o.databaseConnectionLifetime,
 		"DATABASE_MAX_CONNS":                     o.databaseMaxConns,
@@ -733,9 +743,9 @@ func (o *options) SortedOptions(redactSecret bool) []*option {
 		"HTTP_CLIENT_MAX_BODY_SIZE":              o.httpClientMaxBodySize,
 		"HTTP_CLIENT_PROXIES":                    clientProxyURLsRedacted,
 		"HTTP_CLIENT_PROXY":                      clientProxyURLRedacted,
-		"HTTP_CLIENT_TIMEOUT":                    o.httpClientTimeout,
+		"HTTP_CLIENT_TIMEOUT":                    int(o.httpClientTimeout.Seconds()),
 		"HTTP_CLIENT_USER_AGENT":                 o.httpClientUserAgent,
-		"HTTP_SERVER_TIMEOUT":                    o.httpServerTimeout,
+		"HTTP_SERVER_TIMEOUT":                    int(o.httpServerTimeout.Seconds()),
 		"HTTP_SERVICE":                           o.httpService,
 		"INVIDIOUS_INSTANCE":                     o.invidiousInstance,
 		"KEY_FILE":                               o.certKeyFile,
@@ -749,7 +759,7 @@ func (o *options) SortedOptions(redactSecret bool) []*option {
 		"METRICS_ALLOWED_NETWORKS":               strings.Join(o.metricsAllowedNetworks, ","),
 		"METRICS_COLLECTOR":                      o.metricsCollector,
 		"METRICS_PASSWORD":                       redactSecretValue(o.metricsPassword, redactSecret),
-		"METRICS_REFRESH_INTERVAL":               o.metricsRefreshInterval,
+		"METRICS_REFRESH_INTERVAL":               int(o.metricsRefreshInterval.Seconds()),
 		"METRICS_USERNAME":                       o.metricsUsername,
 		"OAUTH2_CLIENT_ID":                       o.oauth2ClientID,
 		"OAUTH2_CLIENT_SECRET":                   redactSecretValue(o.oauth2ClientSecret, redactSecret),
@@ -759,22 +769,23 @@ func (o *options) SortedOptions(redactSecret bool) []*option {
 		"OAUTH2_REDIRECT_URL":                    o.oauth2RedirectURL,
 		"OAUTH2_USER_CREATION":                   o.oauth2UserCreationAllowed,
 		"DISABLE_LOCAL_AUTH":                     o.disableLocalAuth,
-		"POLLING_FREQUENCY":                      o.pollingFrequency,
-		"FORCE_REFRESH_INTERVAL":                 o.forceRefreshInterval,
+		"FORCE_REFRESH_INTERVAL":                 int(o.forceRefreshInterval.Minutes()),
+		"POLLING_FREQUENCY":                      int(o.pollingFrequency.Minutes()),
+		"POLLING_LIMIT_PER_HOST":                 o.pollingLimitPerHost,
 		"POLLING_PARSING_ERROR_LIMIT":            o.pollingParsingErrorLimit,
 		"POLLING_SCHEDULER":                      o.pollingScheduler,
-		"MEDIA_PROXY_HTTP_CLIENT_TIMEOUT":        o.mediaProxyHTTPClientTimeout,
+		"MEDIA_PROXY_HTTP_CLIENT_TIMEOUT":        int(o.mediaProxyHTTPClientTimeout.Seconds()),
 		"MEDIA_PROXY_RESOURCE_TYPES":             o.mediaProxyResourceTypes,
 		"MEDIA_PROXY_MODE":                       o.mediaProxyMode,
 		"MEDIA_PROXY_PRIVATE_KEY":                mediaProxyPrivateKeyValue,
 		"MEDIA_PROXY_CUSTOM_URL":                 o.mediaProxyCustomURL,
 		"ROOT_URL":                               o.rootURL,
 		"RUN_MIGRATIONS":                         o.runMigrations,
-		"SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL": o.schedulerEntryFrequencyMaxInterval,
-		"SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL": o.schedulerEntryFrequencyMinInterval,
+		"SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL": int(o.schedulerEntryFrequencyMaxInterval.Minutes()),
+		"SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL": int(o.schedulerEntryFrequencyMinInterval.Minutes()),
 		"SCHEDULER_ENTRY_FREQUENCY_FACTOR":       o.schedulerEntryFrequencyFactor,
-		"SCHEDULER_ROUND_ROBIN_MIN_INTERVAL":     o.schedulerRoundRobinMinInterval,
-		"SCHEDULER_ROUND_ROBIN_MAX_INTERVAL":     o.schedulerRoundRobinMaxInterval,
+		"SCHEDULER_ROUND_ROBIN_MIN_INTERVAL":     int(o.schedulerRoundRobinMinInterval.Minutes()),
+		"SCHEDULER_ROUND_ROBIN_MAX_INTERVAL":     int(o.schedulerRoundRobinMaxInterval.Minutes()),
 		"SCHEDULER_SERVICE":                      o.schedulerService,
 		"WATCHDOG":                               o.watchdog,
 		"WORKER_POOL_SIZE":                       o.workerPoolSize,

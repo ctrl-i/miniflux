@@ -4,8 +4,8 @@
 package model // import "miniflux.app/v2/internal/model"
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -67,11 +67,11 @@ func TestFeedCheckedNow(t *testing.T) {
 	}
 }
 
-func checkTargetInterval(t *testing.T, feed *Feed, targetInterval int, timeBefore time.Time, message string) {
-	if feed.NextCheckAt.Before(timeBefore.Add(time.Minute * time.Duration(targetInterval))) {
+func checkTargetInterval(t *testing.T, feed *Feed, targetInterval time.Duration, timeBefore time.Time, message string) {
+	if feed.NextCheckAt.Before(timeBefore.Add(targetInterval)) {
 		t.Errorf(`The next_check_at should be after timeBefore + %s`, message)
 	}
-	if feed.NextCheckAt.After(time.Now().Add(time.Minute * time.Duration(targetInterval))) {
+	if feed.NextCheckAt.After(time.Now().Add(targetInterval)) {
 		t.Errorf(`The next_check_at should be before now + %s`, message)
 	}
 }
@@ -171,7 +171,7 @@ func TestFeedScheduleNextCheckRoundRobinMinInterval(t *testing.T) {
 	minInterval := 1
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "round_robin")
-	os.Setenv("SCHEDULER_ROUND_ROBIN_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ROUND_ROBIN_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -188,7 +188,7 @@ func TestFeedScheduleNextCheckRoundRobinMinInterval(t *testing.T) {
 		t.Error(`The next_check_at must be set`)
 	}
 
-	expectedInterval := minInterval
+	expectedInterval := time.Duration(minInterval) * time.Minute
 	checkTargetInterval(t, feed, expectedInterval, timeBefore, "TestFeedScheduleNextCheckRoundRobinMinInterval")
 }
 
@@ -197,8 +197,8 @@ func TestFeedScheduleNextCheckEntryFrequencyMaxInterval(t *testing.T) {
 	minInterval := 1
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", fmt.Sprintf("%d", maxInterval))
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", strconv.Itoa(maxInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -217,7 +217,7 @@ func TestFeedScheduleNextCheckEntryFrequencyMaxInterval(t *testing.T) {
 		t.Error(`The next_check_at must be set`)
 	}
 
-	targetInterval := maxInterval
+	targetInterval := time.Duration(maxInterval) * time.Minute
 	checkTargetInterval(t, feed, targetInterval, timeBefore, "entry frequency max interval")
 }
 
@@ -226,8 +226,8 @@ func TestFeedScheduleNextCheckEntryFrequencyMaxIntervalZeroWeeklyCount(t *testin
 	minInterval := 1
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", fmt.Sprintf("%d", maxInterval))
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", strconv.Itoa(maxInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -246,7 +246,7 @@ func TestFeedScheduleNextCheckEntryFrequencyMaxIntervalZeroWeeklyCount(t *testin
 		t.Error(`The next_check_at must be set`)
 	}
 
-	targetInterval := maxInterval
+	targetInterval := time.Duration(maxInterval) * time.Minute
 	checkTargetInterval(t, feed, targetInterval, timeBefore, "entry frequency max interval")
 }
 
@@ -255,8 +255,8 @@ func TestFeedScheduleNextCheckEntryFrequencyMinInterval(t *testing.T) {
 	minInterval := 100
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", fmt.Sprintf("%d", maxInterval))
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", strconv.Itoa(maxInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -275,7 +275,7 @@ func TestFeedScheduleNextCheckEntryFrequencyMinInterval(t *testing.T) {
 		t.Error(`The next_check_at must be set`)
 	}
 
-	targetInterval := minInterval
+	targetInterval := time.Duration(minInterval) * time.Minute
 	checkTargetInterval(t, feed, targetInterval, timeBefore, "entry frequency min interval")
 }
 
@@ -283,7 +283,7 @@ func TestFeedScheduleNextCheckEntryFrequencyFactor(t *testing.T) {
 	factor := 2
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_FACTOR", fmt.Sprintf("%d", factor))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_FACTOR", strconv.Itoa(factor))
 
 	var err error
 	parser := config.NewParser()
@@ -301,7 +301,7 @@ func TestFeedScheduleNextCheckEntryFrequencyFactor(t *testing.T) {
 		t.Error(`The next_check_at must be set`)
 	}
 
-	targetInterval := config.Opts.SchedulerEntryFrequencyMaxInterval() / factor
+	targetInterval := config.Opts.SchedulerEntryFrequencyMaxInterval() / time.Duration(factor)
 	checkTargetInterval(t, feed, targetInterval, timeBefore, "factor * count")
 }
 
@@ -311,8 +311,8 @@ func TestFeedScheduleNextCheckEntryFrequencySmallNewTTL(t *testing.T) {
 	minInterval := 100
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", fmt.Sprintf("%d", maxInterval))
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", strconv.Itoa(maxInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -326,17 +326,17 @@ func TestFeedScheduleNextCheckEntryFrequencySmallNewTTL(t *testing.T) {
 	// Use a very large weekly count to trigger the min interval
 	weeklyCount := largeWeeklyCount
 	// TTL is smaller than minInterval.
-	newTTL := minInterval / 2
+	newTTL := time.Duration(minInterval) * time.Minute / 2
 	feed.ScheduleNextCheck(weeklyCount, newTTL)
 
 	if feed.NextCheckAt.IsZero() {
 		t.Error(`The next_check_at must be set`)
 	}
 
-	targetInterval := minInterval
+	targetInterval := time.Duration(minInterval) * time.Minute
 	checkTargetInterval(t, feed, targetInterval, timeBefore, "entry frequency min interval")
 
-	if feed.NextCheckAt.Before(timeBefore.Add(time.Minute * time.Duration(newTTL))) {
+	if feed.NextCheckAt.Before(timeBefore.Add(newTTL)) {
 		t.Error(`The next_check_at should be after timeBefore + TTL`)
 	}
 }
@@ -347,8 +347,8 @@ func TestFeedScheduleNextCheckEntryFrequencyLargeNewTTL(t *testing.T) {
 	minInterval := 100
 	os.Clearenv()
 	os.Setenv("POLLING_SCHEDULER", "entry_frequency")
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", fmt.Sprintf("%d", maxInterval))
-	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", fmt.Sprintf("%d", minInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL", strconv.Itoa(maxInterval))
+	os.Setenv("SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL", strconv.Itoa(minInterval))
 
 	var err error
 	parser := config.NewParser()
@@ -362,7 +362,7 @@ func TestFeedScheduleNextCheckEntryFrequencyLargeNewTTL(t *testing.T) {
 	// Use a very large weekly count to trigger the min interval
 	weeklyCount := largeWeeklyCount
 	// TTL is larger than minInterval.
-	newTTL := minInterval * 2
+	newTTL := time.Duration(minInterval) * time.Minute * 2
 	feed.ScheduleNextCheck(weeklyCount, newTTL)
 
 	if feed.NextCheckAt.IsZero() {

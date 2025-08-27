@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // parser handles configuration parsing.
@@ -126,51 +127,54 @@ func (p *parser) parseLines(lines []string) (err error) {
 		case "CERT_DOMAIN":
 			p.opts.certDomain = parseString(value, defaultCertDomain)
 		case "CLEANUP_FREQUENCY_HOURS":
-			p.opts.cleanupFrequencyHours = parseInt(value, defaultCleanupFrequencyHours)
+			p.opts.cleanupFrequencyInterval = parseInterval(value, time.Hour, defaultCleanupFrequency)
 		case "CLEANUP_ARCHIVE_READ_DAYS":
-			p.opts.cleanupArchiveReadDays = parseInt(value, defaultCleanupArchiveReadDays)
+			p.opts.cleanupArchiveReadInterval = parseInterval(value, 24*time.Hour, defaultCleanupArchiveReadInterval)
 		case "CLEANUP_ARCHIVE_UNREAD_DAYS":
-			p.opts.cleanupArchiveUnreadDays = parseInt(value, defaultCleanupArchiveUnreadDays)
+			p.opts.cleanupArchiveUnreadInterval = parseInterval(value, 24*time.Hour, defaultCleanupArchiveUnreadInterval)
 		case "CLEANUP_ARCHIVE_BATCH_SIZE":
 			p.opts.cleanupArchiveBatchSize = parseInt(value, defaultCleanupArchiveBatchSize)
 		case "CLEANUP_REMOVE_SESSIONS_DAYS":
-			p.opts.cleanupRemoveSessionsDays = parseInt(value, defaultCleanupRemoveSessionsDays)
+			p.opts.cleanupRemoveSessionsInterval = parseInterval(value, 24*time.Hour, defaultCleanupRemoveSessionsInterval)
 		case "WORKER_POOL_SIZE":
 			p.opts.workerPoolSize = parseInt(value, defaultWorkerPoolSize)
-		case "POLLING_FREQUENCY":
-			p.opts.pollingFrequency = parseInt(value, defaultPollingFrequency)
 		case "FORCE_REFRESH_INTERVAL":
-			p.opts.forceRefreshInterval = parseInt(value, defaultForceRefreshInterval)
+			p.opts.forceRefreshInterval = parseInterval(value, time.Minute, defaultForceRefreshInterval)
 		case "BATCH_SIZE":
 			p.opts.batchSize = parseInt(value, defaultBatchSize)
+		case "POLLING_FREQUENCY":
+			p.opts.pollingFrequency = parseInterval(value, time.Minute, defaultPollingFrequency)
+		case "POLLING_LIMIT_PER_HOST":
+			p.opts.pollingLimitPerHost = parseInt(value, 0)
+		case "POLLING_PARSING_ERROR_LIMIT":
+			p.opts.pollingParsingErrorLimit = parseInt(value, defaultPollingParsingErrorLimit)
 		case "POLLING_SCHEDULER":
 			p.opts.pollingScheduler = strings.ToLower(parseString(value, defaultPollingScheduler))
 		case "SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL":
-			p.opts.schedulerEntryFrequencyMaxInterval = parseInt(value, defaultSchedulerEntryFrequencyMaxInterval)
+			p.opts.schedulerEntryFrequencyMaxInterval = parseInterval(value, time.Minute, defaultSchedulerEntryFrequencyMaxInterval)
 		case "SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL":
-			p.opts.schedulerEntryFrequencyMinInterval = parseInt(value, defaultSchedulerEntryFrequencyMinInterval)
+			p.opts.schedulerEntryFrequencyMinInterval = parseInterval(value, time.Minute, defaultSchedulerEntryFrequencyMinInterval)
 		case "SCHEDULER_ENTRY_FREQUENCY_FACTOR":
 			p.opts.schedulerEntryFrequencyFactor = parseInt(value, defaultSchedulerEntryFrequencyFactor)
 		case "SCHEDULER_ROUND_ROBIN_MIN_INTERVAL":
-			p.opts.schedulerRoundRobinMinInterval = parseInt(value, defaultSchedulerRoundRobinMinInterval)
+			p.opts.schedulerRoundRobinMinInterval = parseInterval(value, time.Minute, defaultSchedulerRoundRobinMinInterval)
 		case "SCHEDULER_ROUND_ROBIN_MAX_INTERVAL":
-			p.opts.schedulerRoundRobinMaxInterval = parseInt(value, defaultSchedulerRoundRobinMaxInterval)
-		case "POLLING_PARSING_ERROR_LIMIT":
-			p.opts.pollingParsingErrorLimit = parseInt(value, defaultPollingParsingErrorLimit)
+			p.opts.schedulerRoundRobinMaxInterval = parseInterval(value, time.Minute, defaultSchedulerRoundRobinMaxInterval)
 		case "MEDIA_PROXY_HTTP_CLIENT_TIMEOUT":
-			p.opts.mediaProxyHTTPClientTimeout = parseInt(value, defaultMediaProxyHTTPClientTimeout)
+			p.opts.mediaProxyHTTPClientTimeout = parseInterval(value, time.Second, defaultMediaProxyHTTPClientTimeout)
 		case "MEDIA_PROXY_MODE":
 			p.opts.mediaProxyMode = parseString(value, defaultMediaProxyMode)
 		case "MEDIA_PROXY_RESOURCE_TYPES":
 			p.opts.mediaProxyResourceTypes = parseStringList(value, []string{defaultMediaResourceTypes})
 		case "MEDIA_PROXY_PRIVATE_KEY":
 			randomKey := make([]byte, 16)
-			if _, err := rand.Read(randomKey); err != nil {
-				return fmt.Errorf("config: unable to generate random key: %w", err)
-			}
+			rand.Read(randomKey)
 			p.opts.mediaProxyPrivateKey = parseBytes(value, randomKey)
 		case "MEDIA_PROXY_CUSTOM_URL":
-			p.opts.mediaProxyCustomURL = parseString(value, defaultMediaProxyURL)
+			p.opts.mediaProxyCustomURL, err = url.Parse(parseString(value, defaultMediaProxyURL))
+			if err != nil {
+				return fmt.Errorf("config: invalid MEDIA_PROXY_CUSTOM_URL value: %w", err)
+			}
 		case "CREATE_ADMIN":
 			p.opts.createAdmin = parseBool(value, defaultCreateAdmin)
 		case "ADMIN_USERNAME":
@@ -202,7 +206,7 @@ func (p *parser) parseLines(lines []string) (err error) {
 		case "DISABLE_LOCAL_AUTH":
 			p.opts.disableLocalAuth = parseBool(value, defaultDisableLocalAuth)
 		case "HTTP_CLIENT_TIMEOUT":
-			p.opts.httpClientTimeout = parseInt(value, defaultHTTPClientTimeout)
+			p.opts.httpClientTimeout = parseInterval(value, time.Second, defaultHTTPClientTimeout)
 		case "HTTP_CLIENT_MAX_BODY_SIZE":
 			p.opts.httpClientMaxBodySize = int64(parseInt(value, defaultHTTPClientMaxBodySize) * 1024 * 1024)
 		case "HTTP_CLIENT_PROXY":
@@ -215,7 +219,7 @@ func (p *parser) parseLines(lines []string) (err error) {
 		case "HTTP_CLIENT_USER_AGENT":
 			p.opts.httpClientUserAgent = parseString(value, defaultHTTPClientUserAgent)
 		case "HTTP_SERVER_TIMEOUT":
-			p.opts.httpServerTimeout = parseInt(value, defaultHTTPServerTimeout)
+			p.opts.httpServerTimeout = parseInterval(value, time.Second, defaultHTTPServerTimeout)
 		case "AUTH_PROXY_HEADER":
 			p.opts.authProxyHeader = parseString(value, defaultAuthProxyHeader)
 		case "AUTH_PROXY_USER_CREATION":
@@ -227,7 +231,7 @@ func (p *parser) parseLines(lines []string) (err error) {
 		case "METRICS_COLLECTOR":
 			p.opts.metricsCollector = parseBool(value, defaultMetricsCollector)
 		case "METRICS_REFRESH_INTERVAL":
-			p.opts.metricsRefreshInterval = parseInt(value, defaultMetricsRefreshInterval)
+			p.opts.metricsRefreshInterval = parseInterval(value, time.Second, defaultMetricsRefreshInterval)
 		case "METRICS_ALLOWED_NETWORKS":
 			p.opts.metricsAllowedNetworks = parseStringList(value, []string{defaultMetricsAllowedNetworks})
 		case "METRICS_USERNAME":
@@ -353,6 +357,20 @@ func parseBytes(value string, fallback []byte) []byte {
 	}
 
 	return []byte(value)
+}
+
+// parseInterval converts an integer "value" to [time.Duration] using "unit" as multiplier.
+func parseInterval(value string, unit time.Duration, fallback time.Duration) time.Duration {
+	if value == "" {
+		return fallback
+	}
+
+	v, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return time.Duration(v) * unit
 }
 
 func readSecretFile(filename, fallback string) string {

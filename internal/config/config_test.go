@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
+	"time"
 )
 
 func TestLogFileDefaultValue(t *testing.T) {
@@ -587,11 +589,21 @@ func TestDefaultCleanupFrequencyHoursValue(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := defaultCleanupFrequencyHours
-	result := opts.CleanupFrequencyHours()
+	expected := defaultCleanupFrequency
+	result := opts.CleanupFrequency()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_FREQUENCY_HOURS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_FREQUENCY_HOURS"
+	})
+
+	expectedSerialized := int(defaultCleanupFrequency / time.Hour)
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -606,11 +618,21 @@ func TestCleanupFrequencyHours(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 42
-	result := opts.CleanupFrequencyHours()
+	expected := 42 * time.Hour
+	result := opts.CleanupFrequency()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_FREQUENCY_HOURS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_FREQUENCY_HOURS"
+	})
+
+	expectedSerialized := 42
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -623,11 +645,21 @@ func TestDefaultCleanupArchiveReadDaysValue(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 60
-	result := opts.CleanupArchiveReadDays()
+	expected := 60 * 24 * time.Hour
+	result := opts.CleanupArchiveReadInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_ARCHIVE_READ_DAYS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_ARCHIVE_READ_DAYS"
+	})
+
+	expectedSerialized := 60
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -642,11 +674,21 @@ func TestCleanupArchiveReadDays(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 7
-	result := opts.CleanupArchiveReadDays()
+	expected := 7 * 24 * time.Hour
+	result := opts.CleanupArchiveReadInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_ARCHIVE_READ_DAYS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_ARCHIVE_READ_DAYS"
+	})
+
+	expectedSerialized := 7
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -659,11 +701,21 @@ func TestDefaultCleanupRemoveSessionsDaysValue(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 30
-	result := opts.CleanupRemoveSessionsDays()
+	expected := 30 * 24 * time.Hour
+	result := opts.CleanupRemoveSessionsInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_REMOVE_SESSIONS_DAYS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_REMOVE_SESSIONS_DAYS"
+	})
+
+	expectedSerialized := 30
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -677,11 +729,21 @@ func TestCleanupRemoveSessionsDays(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 7
-	result := opts.CleanupRemoveSessionsDays()
+	expected := 7 * 24 * time.Hour
+	result := opts.CleanupRemoveSessionsInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected CLEANUP_REMOVE_SESSIONS_DAYS value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "CLEANUP_REMOVE_SESSIONS_DAYS"
+	})
+
+	expectedSerialized := 7
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -720,7 +782,7 @@ func TestWorkerPoolSize(t *testing.T) {
 	}
 }
 
-func TestDefautPollingFrequencyValue(t *testing.T) {
+func TestDefaultPollingFrequencyValue(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -735,6 +797,16 @@ func TestDefautPollingFrequencyValue(t *testing.T) {
 	if result != expected {
 		t.Fatalf(`Unexpected POLLING_FREQUENCY value, got %v instead of %v`, result, expected)
 	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "POLLING_FREQUENCY"
+	})
+
+	expectedSerialized := int(defaultPollingFrequency / time.Minute)
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
 }
 
 func TestPollingFrequency(t *testing.T) {
@@ -747,15 +819,25 @@ func TestPollingFrequency(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 42
+	expected := 42 * time.Minute
 	result := opts.PollingFrequency()
 
 	if result != expected {
 		t.Fatalf(`Unexpected POLLING_FREQUENCY value, got %v instead of %v`, result, expected)
 	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "POLLING_FREQUENCY"
+	})
+
+	expectedSerialized := 42
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
 }
 
-func TestDefautForceRefreshInterval(t *testing.T) {
+func TestDefaultForceRefreshInterval(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -782,11 +864,21 @@ func TestForceRefreshInterval(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 42
+	expected := 42 * time.Minute
 	result := opts.ForceRefreshInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected FORCE_REFRESH_INTERVAL value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "FORCE_REFRESH_INTERVAL"
+	})
+
+	expectedSerialized := 42
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -825,7 +917,7 @@ func TestBatchSize(t *testing.T) {
 	}
 }
 
-func TestDefautPollingSchedulerValue(t *testing.T) {
+func TestDefaultPollingSchedulerValue(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -860,7 +952,7 @@ func TestPollingScheduler(t *testing.T) {
 	}
 }
 
-func TestDefautSchedulerEntryFrequencyMaxIntervalValue(t *testing.T) {
+func TestDefaultSchedulerEntryFrequencyMaxIntervalValue(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -887,15 +979,25 @@ func TestSchedulerEntryFrequencyMaxInterval(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 30
+	expected := 30 * time.Minute
 	result := opts.SchedulerEntryFrequencyMaxInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL value, got %v instead of %v`, result, expected)
 	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL"
+	})
+
+	expectedSerialized := 30
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
 }
 
-func TestDefautSchedulerEntryFrequencyMinIntervalValue(t *testing.T) {
+func TestDefaultSchedulerEntryFrequencyMinIntervalValue(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -922,15 +1024,25 @@ func TestSchedulerEntryFrequencyMinInterval(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 30
+	expected := 30 * time.Minute
 	result := opts.SchedulerEntryFrequencyMinInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL value, got %v instead of %v`, result, expected)
 	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "SCHEDULER_ENTRY_FREQUENCY_MIN_INTERVAL"
+	})
+
+	expectedSerialized := 30
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
 }
 
-func TestDefautSchedulerEntryFrequencyFactorValue(t *testing.T) {
+func TestDefaultSchedulerEntryFrequencyFactorValue(t *testing.T) {
 	os.Clearenv()
 
 	parser := NewParser()
@@ -992,11 +1104,21 @@ func TestSchedulerRoundRobin(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 15
+	expected := 15 * time.Minute
 	result := opts.SchedulerRoundRobinMinInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected SCHEDULER_ROUND_ROBIN_MIN_INTERVAL value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "SCHEDULER_ROUND_ROBIN_MIN_INTERVAL"
+	})
+
+	expectedSerialized := 15
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -1027,11 +1149,21 @@ func TestSchedulerRoundRobinMaxInterval(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 150
+	expected := 150 * time.Minute
 	result := opts.SchedulerRoundRobinMaxInterval()
 
 	if result != expected {
 		t.Fatalf(`Unexpected SCHEDULER_ROUND_ROBIN_MAX_INTERVAL value, got %v instead of %v`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "SCHEDULER_ROUND_ROBIN_MAX_INTERVAL"
+	})
+
+	expectedSerialized := 150
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -1565,11 +1697,21 @@ func TestMediaProxyHTTPClientTimeout(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 24
+	expected := 24 * time.Second
 	result := opts.MediaProxyHTTPClientTimeout()
 
 	if result != expected {
 		t.Fatalf(`Unexpected MEDIA_PROXY_HTTP_CLIENT_TIMEOUT value, got %d instead of %d`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "MEDIA_PROXY_HTTP_CLIENT_TIMEOUT"
+	})
+
+	expectedSerialized := 24
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -1588,6 +1730,16 @@ func TestDefaultMediaProxyHTTPClientTimeoutValue(t *testing.T) {
 	if result != expected {
 		t.Fatalf(`Unexpected MEDIA_PROXY_HTTP_CLIENT_TIMEOUT value, got %d instead of %d`, result, expected)
 	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "MEDIA_PROXY_HTTP_CLIENT_TIMEOUT"
+	})
+
+	expectedSerialized := int(defaultMediaProxyHTTPClientTimeout / time.Second)
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
 }
 
 func TestMediaProxyCustomURL(t *testing.T) {
@@ -1601,7 +1753,8 @@ func TestMediaProxyCustomURL(t *testing.T) {
 	}
 	expected := "http://example.org/proxy"
 	result := opts.MediaCustomProxyURL()
-	if result != expected {
+
+	if result == nil || result.String() != expected {
 		t.Fatalf(`Unexpected MEDIA_PROXY_CUSTOM_URL value, got %q instead of %q`, result, expected)
 	}
 }
@@ -1663,11 +1816,21 @@ func TestHTTPClientTimeout(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 42
+	expected := 42 * time.Second
 	result := opts.HTTPClientTimeout()
 
 	if result != expected {
 		t.Fatalf(`Unexpected HTTP_CLIENT_TIMEOUT value, got %d instead of %d`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "HTTP_CLIENT_TIMEOUT"
+	})
+
+	expectedSerialized := 42
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -1733,11 +1896,21 @@ func TestHTTPServerTimeout(t *testing.T) {
 		t.Fatalf(`Parsing failure: %v`, err)
 	}
 
-	expected := 342
+	expected := 342 * time.Second
 	result := opts.HTTPServerTimeout()
 
 	if result != expected {
 		t.Fatalf(`Unexpected HTTP_SERVER_TIMEOUT value, got %d instead of %d`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "HTTP_SERVER_TIMEOUT"
+	})
+
+	expectedSerialized := 342
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }
 
@@ -2102,5 +2275,93 @@ func TestInvalidHTTPClientProxy(t *testing.T) {
 	_, err := parser.ParseEnvironmentVariables()
 	if err == nil {
 		t.Fatalf(`Expected error for invalid HTTP_CLIENT_PROXY value, but got none`)
+	}
+}
+
+func TestDefaultPollingLimitPerHost(t *testing.T) {
+	os.Clearenv()
+
+	parser := NewParser()
+	opts, err := parser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf(`Parsing failure: %v`, err)
+	}
+
+	expected := 0
+	result := opts.PollingLimitPerHost()
+	if result != expected {
+		t.Fatalf(`Unexpected default PollingLimitPerHost value, got %v instead of %v`, result, expected)
+	}
+}
+
+func TestCustomPollingLimitPerHost(t *testing.T) {
+	os.Clearenv()
+	os.Setenv("POLLING_LIMIT_PER_HOST", "10")
+
+	parser := NewParser()
+	opts, err := parser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf(`Parsing failure: %v`, err)
+	}
+
+	expected := 10
+	result := opts.PollingLimitPerHost()
+	if result != expected {
+		t.Fatalf(`Unexpected custom PollingLimitPerHost value, got %v instead of %v`, result, expected)
+	}
+}
+
+func TestMetricsRefreshInterval(t *testing.T) {
+	os.Clearenv()
+	os.Setenv("METRICS_REFRESH_INTERVAL", "33")
+
+	parser := NewParser()
+	opts, err := parser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf(`Parsing failure: %v`, err)
+	}
+
+	expected := 33 * time.Second
+	result := opts.MetricsRefreshInterval()
+
+	if result != expected {
+		t.Fatalf(`Unexpected METRICS_REFRESH_INTERVAL value, got %d instead of %d`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "METRICS_REFRESH_INTERVAL"
+	})
+
+	expectedSerialized := 33
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
+	}
+}
+
+func TestDefaultMetricsRefreshInterval(t *testing.T) {
+	os.Clearenv()
+
+	parser := NewParser()
+	opts, err := parser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf(`Parsing failure: %v`, err)
+	}
+
+	expected := defaultMetricsRefreshInterval
+	result := opts.MetricsRefreshInterval()
+
+	if result != expected {
+		t.Fatalf(`Unexpected METRICS_REFRESH_INTERVAL value, got %d instead of %d`, result, expected)
+	}
+
+	sorted := opts.SortedOptions(false)
+	i := slices.IndexFunc(sorted, func(opt *option) bool {
+		return opt.Key == "METRICS_REFRESH_INTERVAL"
+	})
+
+	expectedSerialized := int(defaultMetricsRefreshInterval / time.Second)
+	if got := sorted[i].Value; got != expectedSerialized {
+		t.Fatalf(`Unexpected value in option output, got %q instead of %q`, got, expectedSerialized)
 	}
 }

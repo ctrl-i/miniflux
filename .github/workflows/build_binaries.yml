@@ -1,4 +1,6 @@
 name: Build Binaries
+permissions:
+  contents: read
 on:
   workflow_dispatch:
   push:
@@ -21,7 +23,7 @@ jobs:
           CGO_ENABLED: 0
         run: make build
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: binaries
           path: miniflux-*

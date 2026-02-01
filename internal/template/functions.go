@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/mail"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"miniflux.app/v2/internal/locale"
 	"miniflux.app/v2/internal/mediaproxy"
 	"miniflux.app/v2/internal/model"
+	"miniflux.app/v2/internal/reader/sanitizer"
 	"miniflux.app/v2/internal/timezone"
 	"miniflux.app/v2/internal/urllib"
 
@@ -31,16 +33,32 @@ type funcMap struct {
 	router *mux.Router
 }
 
+var imgRE = regexp.MustCompile(`<img[^>]+\bsrc=["']([^"']+)\.jpg["']`)
+
 // Map returns a map of template functions that are compiled during template parsing.
 func (f *funcMap) Map() template.FuncMap {
 	return template.FuncMap{
-		"contains":         strings.Contains,
-		"csp":              csp,
-		"startsWith":       strings.HasPrefix,
-		"formatFileSize":   formatFileSize,
-		"dict":             dict,
-		"truncate":         truncate,
-		"isEmail":          isEmail,
+		"contains":       strings.Contains,
+		"csp":            csp,
+		"startsWith":     strings.HasPrefix,
+		"formatFileSize": formatFileSize,
+		"dict":           dict,
+		"truncate":       truncate,
+		"isEmail":        isEmail,
+		"stripHTML": func(htm string) template.HTML {
+			stripped := sanitizer.StripTags(string(htm))
+			return template.HTML(fmt.Sprintf("%s", stripped))
+		},
+		"findImages": func(htm, title string) template.HTML {
+			matches := imgRE.FindStringSubmatch(fmt.Sprintf("%s", template.HTML(htm)))
+			if matches != nil {
+				return template.HTML(fmt.Sprintf(
+					`<p><img aria-hidden="true" src="%s.jpg" loading="lazy" alt="%s" /></p>`,
+					matches[1], title,
+				))
+			}
+			return template.HTML("")
+		},
 		"baseURL":          config.Opts.BaseURL,
 		"apiEnabled":       config.Opts.HasAPI,
 		"rootURL":          config.Opts.RootURL,
@@ -100,8 +118,8 @@ func (f *funcMap) Map() template.FuncMap {
 		"nonce": func() string {
 			return crypto.GenerateRandomStringHex(16)
 		},
-		"deRef":     func(i *int) int { return *i },
-		"duration":  duration,
+		"deRef":    func(i *int) int { return *i },
+		"duration": duration,
 		"urlEncode": url.PathEscape,
 		"subtract": func(a, b int) int {
 			return a - b

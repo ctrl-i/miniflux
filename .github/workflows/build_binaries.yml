@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
       - name: Set up Golang
         uses: actions/setup-go@v6
         with:
@@ -23,7 +23,7 @@ jobs:
           CGO_ENABLED: 0
         run: make build
       - name: Upload binaries
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v5
         with:
           name: binaries
           path: miniflux-*

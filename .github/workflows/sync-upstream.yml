@@ -1,0 +1,25 @@
+name: Sync from upstream main
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'    # every hour, at minute 0
+  workflow_dispatch:        # optional: manual "Run workflow" button
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tracking branch
+        uses: actions/checkout@v4
+        with:
+          ref: upstream-main
+
+      - name: Add upstream remote and fetch
+        run: |
+          git remote add upstream https://github.com/miniflux/v2.git || true
+          git fetch upstream
+
+      - name: Fast-forward upstream-main to upstream/main
+        run: |
+          git merge --ff-only upstream/main || echo "Nothing to fast-forward"
+          git push origin upstream-main

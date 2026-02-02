@@ -1,5 +1,4 @@
 name: Sync Upstream
-
 on:
   schedule:
     - cron: '15 */6 * * *'
@@ -10,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sync_happened: ${{ steps.check_sync.outputs.sync_happened }}
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,13 +28,16 @@ jobs:
           UPSTREAM_COMMIT=$(git rev-parse upstream/main)
           echo "Local main:    $LOCAL_COMMIT"
           echo "Upstream main: $UPSTREAM_COMMIT"
-
-          if git merge-base --is-ancestor "$LOCAL_COMMIT" "$UPSTREAM_COMMIT"; then
-            echo "Upstream is behind or equal; no sync needed."
-            echo "sync_happened=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Upstream has new commits ahead; sync needed."
+          LOCAL_DATE=$(git show -s --format=%ct "$LOCAL_COMMIT")
+          UPSTREAM_DATE=$(git show -s --format=%ct "$UPSTREAM_COMMIT")
+          echo "Local date:    $LOCAL_DATE"
+          echo "Upstream date: $UPSTREAM_DATE"
+          if [ "$UPSTREAM_DATE" -gt "$LOCAL_DATE" ]; then
+            echo "Upstream is newer; sync needed."
             echo "sync_happened=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream is older/equal; no sync needed."
+            echo "sync_happened=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Sync and push upstream changes

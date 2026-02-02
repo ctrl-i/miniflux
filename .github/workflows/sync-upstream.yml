@@ -2,8 +2,8 @@ name: Sync Upstream
 
 on:
   schedule:
-    - cron: '15 */6 * * *'  # Every 6 hours
-  workflow_dispatch:         # Manual trigger
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -25,18 +25,17 @@ jobs:
       - name: Check if upstream has new commits
         id: check_sync
         run: |
-          # Compare local main to upstream/main
           git checkout main
           LOCAL_COMMIT=$(git rev-parse main)
           UPSTREAM_COMMIT=$(git rev-parse upstream/main)
           echo "Local main:    $LOCAL_COMMIT"
           echo "Upstream main: $UPSTREAM_COMMIT"
 
-          if [ "$UPSTREAM_COMMIT" = "$LOCAL_COMMIT" ]; then
-            echo "Upstream is up to date; no sync needed."
+          if git merge-base --is-ancestor "$LOCAL_COMMIT" "$UPSTREAM_COMMIT"; then
+            echo "Upstream is behind or equal; no sync needed."
             echo "sync_happened=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Upstream has new commits; sync needed."
+            echo "Upstream has new commits ahead; sync needed."
             echo "sync_happened=true" >> "$GITHUB_OUTPUT"
           fi
 

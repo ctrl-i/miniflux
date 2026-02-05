@@ -43,9 +43,19 @@ jobs:
       - name: Sync and push upstream changes
         if: ${{ steps.check_sync.outputs.sync_happened == 'true' }}
         run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge upstream/main --no-edit
+
+          git checkout main
+
+          # Normal merge; .gitattributes makes .github/workflows/* always keep ours
+          if ! git merge upstream/main --no-edit; then
+            echo "Merge failed for some other reason; aborting."
+            git merge --abort || true
+            exit 1
+          fi
+
           git push origin main
 
   docker:
